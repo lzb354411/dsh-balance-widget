@@ -192,6 +192,14 @@ This section is for the DSH Store / plugin audit: dependencies, runtime permissi
 
 ## Changelog
 
+### v0.6.4 — All-time cumulative cost (fork release)
+> Maintained at [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget), based on upstream v0.6.3 (LL-cmyk-so/dsh-balance-widget) with extra features; upstream changes will be merged periodically.
+- ✨ **New "Total · all time" row**: beyond today's tiers, the popover now shows the **cumulative estimated cost of every session on record**, with the earliest recorded day in the ⓘ tooltip
+- ✨ **Collapsed card foot upgraded**: "Today · all ¥x.x" becomes a two-ended "Today ¥x.x ｜ Total ¥x.x" row with **unchanged card height**; amounts use a compact format (1 decimal ≥¥10, 2 below), hovering "Total" shows the start date
+- ⚙️ **New `GET /api/dsh-balance/total-cost` route**: walks the whole `~/.dsh/sessions` tree (no same-day mtime filter), decompresses every session log and sums per-sample peak/off-peak prices; reuses the existing (path, mtime) parse cache and 30s result cache — cold start ~1–2s, then instant
+- ⚠️ **Caveats**: still an estimate (peak/off-peak rate × tokens), and only sessions still present on disk are counted; deleted session directories drop out of the total
+- 🧪 **Verified**: a mocked cordis host drives the real route against real session logs, returning the cumulative amount and earliest day; legacy routes (today-cost etc.) are unaffected
+
 ### v0.6.3 — China's statutory holidays are now priced off-peak all day
 - 🐛 **Fixed**: the peak/off-peak check excluded weekends but **not China's statutory holidays**. The official rule is "Beijing time **Mon–Fri (China's statutory holidays excluded)** 09:00–12:00 and 14:00–18:00 are peak; everything else — weekends and statutory holidays all day — is off-peak", so a statutory holiday falling on a weekday was **priced at 2×**. Measured against the built-in 2026 arrangement: Spring Festival 2/18, Dragon Boat 6/19, Mid-Autumn 9/25 and National Day 10/1–10/7 were all mispriced as peak, doubling their cost
 - 📅 **The 2026 statutory holiday table is built in** ([国办发明电〔2025〕7号](https://www.gov.cn/zhengce/zhengceku/202511/content_7047091.htm); **33 days** across New Year, Spring Festival, Qingming, Labour Day, Dragon Boat, Mid-Autumn and National Day — **19 of them on weekdays**, exactly the ones that used to be priced at 2×), matched on the Beijing calendar day. Make-up workdays that fall on a Saturday or Sunday were already off-peak (the official rule lists weekends outright); they are now pinned by tests too
