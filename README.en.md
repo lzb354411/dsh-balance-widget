@@ -9,13 +9,13 @@
 [![Node 24](https://img.shields.io/badge/Node%2024-ready-brightgreen?style=flat-square)](https://nodejs.org)
 [![Zero deps](https://img.shields.io/badge/dependencies-zero-brightgreen?style=flat-square)]()
 
-A balance & cost widget for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) **Web GUI and desktop app**: a persistent sidebar footer card shows the account balance and today's cost; clicking opens a five-tier cost breakdown (balance / last prompt with its session name / today-this-session / today-this-workspace / today-all-workspaces).
+A balance & cost widget for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) **Web GUI and desktop app**: a **freely draggable** floating card shows the account balance and today's cost; clicking opens a five-tier cost breakdown (balance / last prompt with its session name / today-this-session / today-this-workspace / today-all-workspaces).
 
 ## Preview
 
-| Sidebar card | Five-tier cost popover |
+| Floating card (draggable, bottom-right by default) | Five-tier cost popover |
 | --- | --- |
-| ![Sidebar card](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-corner.png) | ![Cost popover](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-popover.png) |
+| ![Floating card](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-corner.png) | ![Cost popover](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-popover.png) |
 
 ## How it differs from similar plugins
 
@@ -40,7 +40,7 @@ A balance & cost widget for the [DeepSeek Harness](https://github.com/deepseek-a
 - **Peak/off-peak status** — a status dot before the card's amount is tinted by the current window (amber at peak / green at off-peak), a "Peak/Off-peak" tag sits next to the popover title, and hovering it shows the current price tier (input/output per 1M tokens).
 - **Token usage** — Also shows the session's input (incl. cache hits) / output tokens.
 - **One-click top-up** — a "Top up" link in the popover footer jumps to the official DeepSeek top-up page (platform.deepseek.com/top_up) in a new tab.
-- **Sidebar card** — a persistent card at the sidebar footer shows balance and today's cost; globally visible, auto-refreshes every 60s (balance via the official API, costs parsed locally), and opening the popover triggers an immediate refresh.
+- **Draggable floating card** — the card floats above the interface (no longer pinned to the sidebar's bottom-left corner) and **drags anywhere on hold**; its place is remembered, so a page reload or an app restart puts it back. A press counts as a drag only past 4px of travel, so a plain click still opens the breakdown; dragging it off-screen pulls it back into view. **Double-click the card** or use the popover's "Reset" button for the default bottom-right place. Auto-refreshes every 60s (balance via the official API, costs parsed locally), and opening the popover triggers an immediate refresh.
 - **Balance color warning** — the balance number is tinted in three tiers: default (healthy) → amber (below `lowThreshold`) → red (below `criticalThreshold`).
 - **Official price auto-sync** — fetches the DeepSeek official pricing page on startup and every 12h; falls back to built-in rates on failure.
 - **Agent tool** — a `deepseek_billing` tool lets the model answer "how much balance do I have / how much did today cost".
@@ -62,9 +62,11 @@ host half (lib/index.js)
   Also registers a deepseek_billing tool for model-driven queries.
 
 client half (lib/client.js)
-  ctx.slots.inject("sidebar.footer.action")
-    → persistent sidebar footer card (balance + today's cost, peak/off-peak status dot; a 36×36 icon button while the sidebar is collapsed)
-    → click opens five-tier cost popover + peak tag + ⓘ term explanations
+  ctx.slots.inject("shell.overlay")
+    → draggable balance card inside the frame-wide floating layer (balance + today's cost, peak/off-peak status dot)
+    → the card portals itself into document.body, escaping the layer's stacking context
+    → place kept in localStorage (key dsh-balance-widget:position:v1): anchored edge + free-space fraction
+    → click opens five-tier cost popover + peak tag + ⓘ term explanations + reset button
 ```
 
 ## Installation
@@ -191,6 +193,17 @@ This section is for the DSH Store / plugin audit: dependencies, runtime permissi
 - All costs are estimates; the provider's bill is authoritative
 
 ## Changelog
+
+### v0.7.0 — The card becomes a freely draggable floating card (fork release)
+> Maintained at [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget), based on upstream v0.6.4 with extra features; upstream changes will be merged periodically.
+- ✨ **The card is now a frame-wide floating card you can drag anywhere**: the mount point moved from `sidebar.footer.action` to the official overlay slot **`shell.overlay`**, and the card portals itself into `document.body`, so it floats above the interface, free of the sidebar's layout, and drags on hold
+- ✨ **Remembered place**: stored in `localStorage` (key `dsh-balance-widget:position:v1`) as "which horizontal edge (left/right) + a fraction of the free space". A reload or restart puts it back; a resized window rescales it, always clamped into the visible area
+- ✨ **Reset**: **double-click the card**, or use the popover's "Reset" button, to return to the default bottom-right place (clearing the stored one)
+- 🐛 **Fixed a position conflict with another plugin**: the card used to register into `sidebar.footer.action`, which `@linxin666/dsh-remote-web-ui` also occupies — its injected CSS forces every **non-shipped** entry in that row to `flex:100%;order:1` and wraps the row (`flex-flow:wrap`), stretching the balance card across the whole row and overlapping its neighbour. Moving to `shell.overlay` decouples it from that slot entirely (see `REFERENCES.md` R1 in this repo)
+- 🖱️ **Dragging never fights clicking**: Pointer Events + `setPointerCapture`, with a 4px travel threshold; the click a drag would otherwise fire is swallowed, so the breakdown never pops open by accident
+- ✨ **The popover closes while dragging**, and now falls back to opening *below* the card when there is not enough room above, so it is never clipped at the top edge
+- ⚠️ **Known limits**: the place lives in browser storage — a different device or cleared site data resets it; on multi-monitor setups clamping uses the primary viewport, so a card dragged to a secondary screen is pulled back
+- 🧪 **Verification**: the real plugin artifact assembled in a real browser (React 18.3.1, real DOM, real PointerEvents) with 20 assertions all green (default bottom-right / drag moves it / drag does not open the popover / place persisted and survives remount / off-screen drag clamped back / still fully visible after resize / double-click resets / popover data complete / the overlay layer never blocks page clicks)
 
 ### v0.6.4 — All-time cumulative cost (fork release)
 > Maintained at [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget), based on upstream v0.6.3 (LL-cmyk-so/dsh-balance-widget) with extra features; upstream changes will be merged periodically.

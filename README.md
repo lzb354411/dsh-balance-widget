@@ -9,13 +9,13 @@
 [![Node 24](https://img.shields.io/badge/Node%2024-ready-brightgreen?style=flat-square)](https://nodejs.org)
 [![Zero deps](https://img.shields.io/badge/dependencies-zero-brightgreen?style=flat-square)]()
 
-DeepSeek Harness (DSH) **Web GUI 与桌面版**通用的余额与成本小部件：侧边栏底部常驻卡片显示账户余额与今日花费，点击弹出五层级成本明细（余额 / 最近提问·标注会话名 / 今日·本会话 / 今日·本工作区 / 今日·所有工作区）。
+DeepSeek Harness (DSH) **Web GUI 与桌面版**通用的余额与成本小部件：界面上有一张**可自由拖动**的悬浮卡片显示账户余额与今日花费，点击弹出五层级成本明细（余额 / 最近提问·标注会话名 / 今日·本会话 / 今日·本工作区 / 今日·所有工作区）。
 
 ## 效果预览
 
-| 侧边栏卡片（左下角常驻） | 点击弹出五层级成本 |
+| 悬浮卡片（可拖动，默认右下角） | 点击弹出五层级成本 |
 | --- | --- |
-| ![侧边栏卡片](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-corner.png) | ![成本明细弹框](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-popover.png) |
+| ![悬浮卡片](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-corner.png) | ![成本明细弹框](https://raw.githubusercontent.com/LL-cmyk-so/dsh-balance-widget/main/docs/screenshot-popover.png) |
 
 ## 与同类插件的区别
 
@@ -40,7 +40,7 @@ DeepSeek Harness (DSH) **Web GUI 与桌面版**通用的余额与成本小部件
 - **峰谷状态标签** — 卡片金额前的状态圆点按当前时段着色（峰时琥珀 / 谷时绿色），弹框标题旁显示「峰时/谷时」标签，悬停可查看当前价格档位（输入/输出单价）。
 - **Token 用量** — 同时展示输入（含缓存命中）/ 输出 token 数。
 - **一键充值** — 弹层底部「去充值」链接直达 DeepSeek 官方充值页（platform.deepseek.com/top_up），新窗口打开。
-- **侧边栏常驻卡片** — 侧边栏底部（设置上方）显示余额 + 今日花费，全局可见；每 60 秒自动刷新（余额走官方接口、成本为本地会话解析），打开弹框时也会立即刷新一次，无需手动操作。
+- **可拖动的悬浮卡片** — 卡片漂在界面最上层（不再固定在侧边栏左下角），**按住即可拖到任意位置**；位置自动记住，刷新页面或重开软件后回到原处。按住拖动超过 4 像素才算拖动，轻点仍然打开明细；拖到屏幕外会被自动拉回可见区域。**双击卡片**或点弹窗里的「复位」可回到默认的右下角。每 60 秒自动刷新（余额走官方接口、成本为本地会话解析），打开弹框时也会立即刷新一次，无需手动操作。
 - **余额数字变色预警** — 余额数字按三档着色：充足（默认色）→ 琥珀（低于 `lowThreshold`）→ 红色（低于 `criticalThreshold`），一眼判断余额健康度。
 - **官方价格自动同步** — 启动时 + 每 12 小时抓取 DeepSeek 官方定价页，改价自动跟进；失败回退内置价目表。
 - **模型工具查询** — 新增 `deepseek_billing` 工具，可直接问模型"余额多少/今天花了多少"。
@@ -57,9 +57,11 @@ host 半区 (lib/index.js)
   另有 deepseek_billing 工具供模型直接查询余额/成本
 
 client 半区 (lib/client.js)
-  ctx.slots.inject("sidebar.footer.action")
-    → 侧边栏底部常驻卡片（余额 + 今日花费，峰/谷时段状态圆点；侧边栏收起时变为 36×36 图标按钮）
-    → 点击弹出五层级成本明细 + 峰谷标签 + ⓘ 名词解释
+  ctx.slots.inject("shell.overlay")
+    → 整框架浮动层里的可拖动余额卡片（余额 + 今日花费，峰/谷时段状态圆点）
+    → 卡片自身 createPortal 到 document.body，脱离浮层的层叠上下文
+    → 位置存 localStorage（键 dsh-balance-widget:position:v1）：锚边 + 自由空间比例
+    → 点击弹出五层级成本明细 + 峰谷标签 + ⓘ 名词解释 + 复位按钮
 ```
 
 ## 安装
@@ -188,6 +190,17 @@ DSH 的插件配置统一放在这个文件里：
 - 所有成本为估算值，实际以官方账单为准
 
 ## 版本历史
+
+### v0.7.0 — 卡片改为可自由拖动的悬浮卡（fork 版本）
+> 本版本由 [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget) 维护，基于上游 v0.6.4 追加功能；上游更新后会择期同步。
+- ✨ **卡片改为整框架浮动卡，可自由拖动**：挂载点从 `sidebar.footer.action` 改为官方浮层槽 **`shell.overlay`**，卡片本身 `createPortal` 到 `document.body`，因此漂在界面最上层、不再受侧栏布局约束，按住即可拖到任意位置
+- ✨ **位置记忆**：存 `localStorage`（键 `dsh-balance-widget:position:v1`），形态为「靠哪条边（左/右）+ 自由空间比例」。刷新或重开软件后回到原处；窗口大小改变时按比例缩放，且始终被钳制在可见区域内
+- ✨ **复位**：**双击卡片**、或点弹窗底部的「复位」按钮，可回到默认的右下角（并清除已记住的位置）
+- 🐛 **修复与他插件的位置冲突**：此前卡片注册在 `sidebar.footer.action`，而 `@linxin666/dsh-remote-web-ui` 也注册在同一个槽，其注入的 CSS 把该行里**非官方条目**强制 `flex:100%;order:1` 并给整行加 `flex-flow:wrap`，导致余额卡片被撑满整行、与邻居重叠。改到 `shell.overlay` 后彻底与本槽解耦（依据见本仓库 `REFERENCES.md` R1）
+- 🖱️ **拖动与点击不打架**：Pointer Events + `setPointerCapture`，移动超过 4 像素才算拖动；拖动松手后抑制「幽灵点击」，不会误弹明细
+- ✨ **拖动期间自动关闭明细弹窗**，并把当前会话/工作区口径保持不变；明细弹窗改为「上方放不下时自动改到卡片下方」，避免贴顶时被裁
+- ⚠️ **已知限制**：位置记在浏览器本地——换设备/清站点数据会重置；多显示器下按主屏视口钳制（副屏会被拉回主屏）
+- 🧪 **验证**：真实浏览器（React 18.3.1 + 真实 DOM + 真实 PointerEvent）装配插件真实产物，20 项断言全绿（默认右下角 / 拖动移动 / 拖动不误触弹窗 / 位置写入 + 重装配后位置不变 / 拖出屏幕被钳回 / resize 后完整可见 / 双击复位 / 弹窗数据齐全 / 浮层不拦截页面点击）
 
 ### v0.6.4 — 新增累计消耗汇总（fork 版本）
 > 本版本由 [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget) 维护，基于上游 v0.6.3（LL-cmyk-so/dsh-balance-widget）追加功能；上游更新后会择期同步。
