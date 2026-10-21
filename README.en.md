@@ -41,6 +41,7 @@ A balance & cost widget for the [DeepSeek Harness](https://github.com/deepseek-a
 - **Token usage** — Also shows the session's input (incl. cache hits) / output tokens.
 - **One-click top-up** — a "Top up" link in the popover footer jumps to the official DeepSeek top-up page (platform.deepseek.com/top_up) in a new tab.
 - **Draggable floating card** — the card floats above the interface (no longer pinned to the sidebar's bottom-left corner) and **drags anywhere on hold**; its place is remembered, so a page reload or an app restart puts it back. A press counts as a drag only past 4px of travel, so a plain click still opens the breakdown; dragging it off-screen pulls it back into view. **Double-click the card** or use the popover's "Reset" button for the default bottom-right place. Auto-refreshes every 60s (balance via the official API, costs parsed locally), and opening the popover triggers an immediate refresh.
+- **A narrow card carrying just two numbers** — the card is **70px wide** (down from 208px) and shows only the **account balance** and the **all-time total**; today's tiers, the last prompt and the per-session/per-workspace figures all live in the popover behind a click. Longer numbers widen the card up to a **90px cap** (86px at `¥1234.56`, 90px at `¥99999.99`), and anything past the cap ellipsises instead of overflowing.
 - **Balance color warning** — the balance number is tinted in three tiers: default (healthy) → amber (below `lowThreshold`) → red (below `criticalThreshold`).
 - **Official price auto-sync** — fetches the DeepSeek official pricing page on startup and every 12h; falls back to built-in rates on failure.
 - **Agent tool** — a `deepseek_billing` tool lets the model answer "how much balance do I have / how much did today cost".
@@ -193,6 +194,13 @@ This section is for the DSH Store / plugin audit: dependencies, runtime permissi
 - All costs are estimates; the provider's bill is authoritative
 
 ## Changelog
+
+### v0.7.1 — A narrower card showing only the balance and the total (fork release)
+> Maintained at [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget), based on v0.7.0; upstream changes will be merged periodically.
+- ✨ **The card narrows from 208px to 70px** (about a two-thirds cut): padding, radius, type (balance 11px / total 10px) and the icon (16→12px) shrink with it
+- ✨ **Two numbers on the face**: account balance plus the all-time total. Today's tiers, the last prompt and the per-session/per-workspace figures **move into the popover behind a click** — nothing was dropped from the popover itself
+- ✨ **Long numbers adapt**: the card grows with its content up to a **90px cap** (~74px at `¥82.83`, 86px at `¥1234.56`, 90px at `¥99999.99`), so a large balance is never truncated; anything beyond the cap ellipsises in the text layer instead of spilling out of the card
+- 🧪 **Verification**: 23/23 assertions green in a real browser (three new ones cover "face shows only balance and total", "70px floor / 90px cap with no overflow", and "the card widens for longer numbers"), with dragging, place memory, reset, popover data and both dictionaries all re-checked
 
 ### v0.7.0 — The card becomes a freely draggable floating card (fork release)
 > Maintained at [lzb354411/dsh-balance-widget](https://github.com/lzb354411/dsh-balance-widget), based on upstream v0.6.4 with extra features; upstream changes will be merged periodically.
